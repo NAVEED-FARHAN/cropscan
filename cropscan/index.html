@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CropScan - Plant Health Analyzer</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .language-selector {
+            background: rgba(255,255,255,0.9);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .language-selector select {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+        }
+        
+        .camera-section {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .button {
+            width: 100%;
+            padding: 20px;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .camera-btn {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        .upload-btn {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .image-preview {
+            width: 100%;
+            max-height: 300px;
+            border-radius: 15px;
+            margin: 15px 0;
+            display: none;
+            object-fit: cover;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .results {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌱 CropScan</h1>
+            <p>Analyze your crop health instantly</p>
+        </div>
+        
+        <div class="language-selector">
+            <select>
+                <option>English</option>
+                <option>हिंदी (Hindi)</option>
+                <option>தமிழ் (Tamil)</option>
+                <option>తెలుగు (Telugu)</option>
+                <option>ਪੰਜਾਬੀ (Punjabi)</option>
+            </select>
+        </div>
+        
+        <div class="camera-section">
+            <button class="button camera-btn">
+                📸 Open Camera
+            </button>
+            <button class="button upload-btn">
+                📁 Upload Image
+            </button>
+            
+            <input type="file" class="hidden" accept="image/*" capture="camera" id="cameraInput">
+            <input type="file" class="hidden" accept="image/*" id="uploadInput">
+            
+            <img class="image-preview" id="imagePreview" alt="Preview">
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Analyzing your crop...</p>
+            </div>
+            
+            <div class="results" id="results">
+                <h3>Analysis Results</h3>
+                <p>Results will appear here...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get buttons
+        const cameraBtn = document.querySelector('.camera-btn');
+        const uploadBtn = document.querySelector('.upload-btn');
+        const cameraInput = document.getElementById('cameraInput');
+        const uploadInput = document.getElementById('uploadInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+
+        // Camera button - opens camera
+        cameraBtn.addEventListener('click', () => {
+            // Check if we're on mobile
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                cameraInput.click(); // On mobile, this opens camera
+            } else {
+                // On desktop, show a message
+                alert('📱 Camera feature works best on mobile phones! Use "Upload Image" button to choose a file.');
+                uploadInput.click(); // Redirect to file picker
+            }
+        });
+
+        // Upload button - opens file picker
+        uploadBtn.addEventListener('click', () => {
+            uploadInput.click();
+        });
+
+        // Handle camera input
+        cameraInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                showImage(file);
+            }
+        });
+
+        // Handle upload input
+        uploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                showImage(file);
+            }
+        });
+
+        function showImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+                
+                // Show loading
+                loading.style.display = 'block';
+                results.style.display = 'none';
+                
+                // Simulate analysis (replace this with real API call later)
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                    results.style.display = 'block';
+                    results.innerHTML = `
+                        <h3>✅ Analysis Complete!</h3>
+                        <p><strong>Plant:</strong> Sample Crop</p>
+                        <p><strong>Health:</strong> Good condition detected</p>
+                        <p><strong>Note:</strong> API integration coming next!</p>
+                    `;
+                }, 2000);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(() => console.log('Service Worker registered'))
+                    .catch(() => console.log('Service Worker registration failed'));
+            });
+        }
+    </script>
+</body>
+</html>
